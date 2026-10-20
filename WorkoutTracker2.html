@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Workout Tracker">
+<meta name="theme-color" content="#007aff">
+<title>Workout Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root {
+  --bg: #f2f2f7; --card: #fff; --text: #000; --sec: #8e8e93;
+  --accent: #007aff; --border: #c6c6c8; --danger: #ff3b30; --success: #34c759;
+  --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom);
+}
+body.dark {
+  --bg: #000; --card: #1c1c1e; --text: #fff; --sec: #8e8e93; --border: #38383a;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+html, body { height: 100%; overscroll-behavior: none; margin: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  background: var(--bg); color: var(--text);
+  padding-bottom: calc(90px + var(--safe-bottom));
+  -webkit-font-smoothing: antialiased;
+}
+header {
+  position: sticky; top: 0; z-index: 100;
+  background: color-mix(in srgb, var(--card) 85%, transparent);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  padding: calc(12px + var(--safe-top)) 16px 14px;
+  border-bottom: 0.5px solid var(--border);
+  font-size: 17px; font-weight: 600; text-align: center;
+}
+.container { max-width: 640px; margin: 0 auto; padding: 16px; }
+.tab { display: none; } .tab.active { display: block; }
+.card {
+  background: var(--card); border-radius: 14px; padding: 16px;
+  margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+h2 { font-size: 13px; font-weight: 600; color: var(--sec); text-transform: uppercase;
+     letter-spacing: .4px; margin: 0 0 12px; }
+label { display: block; font-size: 13px; color: var(--sec); margin-bottom: 5px; }
+input, select, textarea {
+  width: 100%; padding: 12px 14px; border: .5px solid var(--border);
+  border-radius: 10px; font-size: 16px; background: var(--bg); color: var(--text);
+  margin-bottom: 10px; -webkit-appearance: none;
+}
+textarea { min-height: 70px; resize: vertical; }
+button {
+  background: var(--accent); color: #fff; border: none; border-radius: 12px;
+  padding: 14px; font-size: 16px; font-weight: 600; width: 100%; margin-bottom: 8px;
+}
+button:active { opacity: .7; }
+button.secondary { background: #e5e5ea; color: var(--text); }
+body.dark button.secondary { background: #3a3a3c; color: #fff; }
+button.danger { background: var(--danger); }
+button.small { width: auto; padding: 8px 12px; font-size: 13px; margin: 0 4px 0 0; }
+.row { display: flex; gap: 10px; } .row > * { flex: 1; }
+.nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+  padding-bottom: var(--safe-bottom); height: calc(78px + var(--safe-bottom));
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-top: .5px solid var(--border); display: flex;
+}
+.nav-item {
+  flex: 1; text-align: center; font-size: 10px; color: var(--sec);
+  padding: 9px 0 4px; font-weight: 500;
+}
+.nav-item.active { color: var(--accent); }
+.nav-item svg { width: 24px; height: 24px; margin: 0 auto 2px; display: block; fill: currentColor; }
+.ex-card {
+  background: var(--bg); border: .5px solid var(--border); border-radius: 12px;
+  padding: 12px; margin-bottom: 10px;
+}
+.ex-title { font-weight: 600; color: var(--accent); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+.pr-badge { background: #ff9500; color: #fff; font-size: 11px; padding: 2px 6px; border-radius: 6px; margin-left: 6px; }
+.empty { text-align: center; color: var(--sec); padding: 18px; font-size: 14px; }
+.modal-bg {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  backdrop-filter: blur(8px); z-index: 3000; justify-content: flex-end; align-items: flex-end;
+}
+.modal-bg.active { display: flex; }
+.modal {
+  background: var(--card); width: 100%; max-width: 500px; border-radius: 16px 16px 0 0;
+  padding: 18px 18px calc(18px + var(--safe-bottom)); max-height: 88vh;
+  display: flex; flex-direction: column; animation: up .25s ease-out;
+}
+@keyframes up { from { transform: translateY(100%); } }
+.modal h3 { margin: 0 0 12px; text-align: center; font-size: 17px; }
+.modal-list { overflow-y: auto; flex: 1; border: .5px solid var(--border); border-radius: 10px;
+              padding: 4px; background: var(--bg); -webkit-overflow-scrolling: touch; margin-bottom: 10px; }
+.modal-item { display: flex; align-items: center; gap: 10px; padding: 12px 8px; border-bottom: .5px solid var(--border); font-size: 15px; }
+.modal-item:last-child { border-bottom: none; }
+.modal-item input { width: 20px; height: 20px; margin: 0; }
+.history-item {
+  background: var(--bg); border: .5px solid var(--border); border-radius: 12px;
+  padding: 12px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
+}
+.history-item .date { font-weight: 600; }
+.history-item .meta { font-size: 13px; color: var(--sec); }
+.timer-float {
+  position: fixed; bottom: calc(100px + var(--safe-bottom)); right: 16px; z-index: 2000;
+  background: var(--accent); color: #fff; border-radius: 50%; width: 64px; height: 64px;
+  display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px;
+  box-shadow: 0 4px 16px rgba(0,122,255,.4); cursor: pointer;
+}
+.timer-float.running { background: var(--danger); }
+.streak { font-size: 28px; font-weight: 700; color: var(--accent); }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stat-box { background: var(--bg); border-radius: 10px; padding: 12px; text-align: center; }
+.stat-box .num { font-size: 22px; font-weight: 700; }
+.stat-box .lbl { font-size: 12px; color: var(--sec); }
+canvas { max-height: 200px; }
+</style>
+</head>
+<body>
+<header id="header">Log Session</header>
+<div class="container">
+
+<!-- ========== LOG TAB ========== -->
+<div id="tab-log" class="tab active">
+  <div class="card">
+    <div class="row" style="margin-bottom:8px;">
+      <button class="secondary small" id="btn-dup" style="flex:1;">Duplicate Last</button>
+      <button class="secondary small" id="btn-templates" style="flex:1;">Templates</button>
+      <button class="secondary small" id="btn-theme" style="flex:1;">Theme</button>
+    </div>
+    <h2>General</h2>
+    <label>Date</label><input type="date" id="log-date">
+    <div class="row">
+      <div><label>Weight (lbs)</label><input type="number" id="log-weight" step="0.1" inputmode="decimal" placeholder="170"></div>
+      <div><label>Hydration</label>
+        <select id="log-hydration"><option value="1">1L</option><option value="2">2L</option><option value="3">3L</option><option value="4" selected>4+L</option></select>
+      </div>
+    </div>
+    <div class="row">
+      <div><label>Nutrition</label>
+        <select id="log-nutrition"><option value="1">1 Poor</option><option value="2">2 Fair</option><option value="3" selected>3 Good</option><option value="4">4 Excellent</option></select>
+      </div>
+      <div><label>Energy</label>
+        <select id="log-energy"><option value="1">1 Not Motivated</option><option value="2">2 Spite</option><option value="3" selected>3 Functional</option><option value="4">4 Feeling It</option><option value="5">5 Pumped</option></select>
+      </div>
+    </div>
+    <label>Session Notes</label>
+    <textarea id="log-notes" placeholder="How did it feel? Any PRs?"></textarea>
+  </div>
+
+  <div class="card">
+    <h2>Strength</h2>
+    <div id="strength-box"><div class="empty" id="s-empty">No exercises</div></div>
+    <button class="secondary" id="btn-add-s">+ Add Strength</button>
+  </div>
+  <div class="card">
+    <h2>Mobility</h2>
+    <div id="mobility-box"><div class="empty" id="m-empty">No movements</div></div>
+    <button class="secondary" id="btn-add-m">+ Add Mobility</button>
+  </div>
+  <div class="card">
+    <h2>Cardio</h2>
+    <div id="cardio-box"><div class="empty" id="c-empty">No cardio</div></div>
+    <button class="secondary" id="btn-add-c">+ Add Cardio</button>
+  </div>
+
+  <button id="btn-save">Save Workout</button>
+  <button class="secondary" id="btn-copy">Copy Summary</button>
+</div>
+
+<!-- ========== HISTORY TAB ========== -->
+<div id="tab-history" class="tab">
+  <div class="card">
+    <h2>All Sessions</h2>
+    <div id="history-list"></div>
+  </div>
+</div>
+
+<!-- ========== INSIGHTS TAB ========== -->
+<div id="tab-insights" class="tab">
+  <div class="card">
+    <h2>Streak & Summary</h2>
+    <div style="text-align:center;margin-bottom:12px;">
+      <div class="streak" id="streak-num">0</div>
+      <div style="color:var(--sec);font-size:13px;">day streak</div>
+    </div>
+    <div class="stat-grid" id="weekly-stats"></div>
+  </div>
+  <div class="card">
+    <h2>Weight Trend</h2>
+    <div class="row" style="margin-bottom:8px;">
+      <input type="number" id="goal-weight" placeholder="Goal weight (lbs)" step="0.1" style="margin:0;">
+      <button class="secondary small" id="btn-set-goal" style="width:auto;margin:0;">Set</button>
+    </div>
+    <canvas id="weightChart"></canvas>
+  </div>
+  <div class="card"><h2>Motivation</h2><canvas id="motivationChart"></canvas></div>
+  <div class="card"><h2>Cardio Minutes</h2><canvas id="cardioChart"></canvas></div>
+  <div class="card">
+    <h2>Personal Records</h2>
+    <div id="pr-list"></div>
+  </div>
+  <div class="card">
+    <h2>Data</h2>
+    <button class="secondary" id="btn-export-json">Export JSON</button>
+    <button class="secondary" id="btn-export-csv">Export CSV</button>
+    <label style="margin-top:10px;">Import JSON</label>
+    <input type="file" id="import-file" accept=".json">
+  </div>
+</div>
+</div>
+
+<!-- FLOATING REST TIMER -->
+<div class="timer-float" id="timer-btn">⏱</div>
+
+<!-- MODALS -->
+<div class="modal-bg" id="sel-modal">
+  <div class="modal">
+    <h3 id="sel-title">Select</h3>
+    <input type="text" id="sel-search" placeholder="Search..." style="margin-bottom:8px;">
+    <div class="modal-list" id="sel-list"></div>
+    <input type="text" id="sel-custom" placeholder="Custom name...">
+    <button class="secondary" id="sel-add-custom">Add Custom</button>
+    <div class="row">
+      <button class="secondary" id="sel-cancel">Cancel</button>
+      <button id="sel-confirm">Add Selected</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="timer-modal">
+  <div class="modal">
+    <h3>Rest Timer</h3>
+    <div class="row" style="margin-bottom:12px;">
+      <button class="secondary" data-sec="60">60s</button>
+      <button class="secondary" data-sec="90">90s</button>
+      <button class="secondary" data-sec="120">120s</button>
+    </div>
+    <input type="number" id="timer-custom" placeholder="Custom seconds" inputmode="numeric">
+    <button id="timer-start">Start</button>
+    <button class="secondary" id="timer-stop" style="display:none;">Stop</button>
+    <div id="timer-display" style="text-align:center;font-size:42px;font-weight:700;margin:16px 0;"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="edit-modal">
+  <div class="modal" style="max-height:92vh;">
+    <h3>Edit Session</h3>
+    <div id="edit-body" style="overflow-y:auto;flex:1;"></div>
+    <div class="row" style="margin-top:10px;">
+      <button class="danger" id="edit-delete">Delete</button>
+      <button id="edit-save">Save Changes</button>
+    </div>
+    <button class="secondary" id="edit-cancel">Cancel</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="tpl-modal">
+  <div class="modal">
+    <h3>Templates</h3>
+    <div id="tpl-list" class="modal-list"></div>
+    <button class="secondary" id="tpl-save-current">Save Current as Template</button>
+    <button class="secondary" id="tpl-close">Close</button>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="nav">
+  <div class="nav-item active" data-tab="log">
+    <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>Log
+  </div>
+  <div class="nav-item" data-tab="history">
+    <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>History
+  </div>
+  <div class="nav-item" data-tab="insights">
+    <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>Insights
+  </div>
+</div>
+
+<script>
+// ---------- STATE ----------
+const $ = id => document.getElementById(id);
+let dict = {
+  strength: JSON.parse(localStorage.getItem('dict_s')) || ['Bench Press','Squat','Deadlift','Overhead Press','Barbell Row','Incline DB Press','Lat Pulldown','RDL','Leg Press','Lateral Raise','Tricep Pushdown','Bicep Curl','Glute Bridge','Bulgarian Split Squat'],
+  mobility: JSON.parse(localStorage.getItem('dict_m')) || ['Couch Stretch','World Greatest Stretch','Cat-Cow','Hamstring Floss','Hip Flexor Stretch','Sciatic Glide','90/90 Hip','T-Spine Extension','Figure-4'],
+  cardio: JSON.parse(localStorage.getItem('dict_c')) || ['Walking','Running','Rowing','Cycling','Elliptical','Stair Climber']
+};
+let favs = JSON.parse(localStorage.getItem('favs')) || {strength:[],mobility:[],cardio:[]};
+let templates = JSON.parse(localStorage.getItem('templates')) || [
+  {name:'Push', strength:['Bench Press','Overhead Press','Incline DB Press','Tricep Pushdown','Lateral Raise'], mobility:[], cardio:[]},
+  {name:'Pull', strength:['Barbell Row','Lat Pulldown','RDL','Bicep Curl'], mobility:[], cardio:[]},
+  {name:'Legs', strength:['Squat','Leg Press','RDL','Bulgarian Split Squat','Glute Bridge'], mobility:[], cardio:[]}
+];
+let history = JSON.parse(localStorage.getItem('history')) || [];
+let prs = JSON.parse(localStorage.getItem('prs')) || {};
+let goalWeight = localStorage.getItem('goalWeight') || '';
+let currentModal = '';
+let editId = null;
+let timerInterval = null;
+let timerSec = 0;
+
+// ---------- INIT ----------
+$('log-date').valueAsDate = new Date();
+$('goal-weight').value = goalWeight;
+applyTheme(localStorage.getItem('theme') || 'system');
+loadDraft();
+renderHistory();
+updateEmpty();
+
+// ---------- NAV ----------
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.onclick = () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    const tab = el.dataset.tab;
+    $('tab-'+tab).classList.add('active');
+    $('header').textContent = tab==='log'?'Log Session':tab==='history'?'History':'Insights';
+    if (tab==='insights') renderInsights();
+    if (tab==='history') renderHistory();
+  };
+});
+
+// ---------- THEME ----------
+$('btn-theme').onclick = () => {
+  const cur = localStorage.getItem('theme') || 'system';
+  const next = cur==='system'?'light':cur==='light'?'dark':'system';
+  localStorage.setItem('theme', next);
+  applyTheme(next);
+  alert('Theme: ' + next);
+};
+function applyTheme(t) {
+  if (t==='dark' || (t==='system' && matchMedia('(prefers-color-scheme:dark)').matches))
+    document.body.classList.add('dark');
+  else document.body.classList.remove('dark');
+}
+
+// ---------- AUTO-SAVE DRAFT ----------
+function saveDraft() {
+  const draft = collectSession();
+  localStorage.setItem('draft', JSON.stringify(draft));
+}
+['log-date','log-weight','log-hydration','log-nutrition','log-energy','log-notes'].forEach(id => {
+  $(id).addEventListener('input', saveDraft);
+  $(id).addEventListener('change', saveDraft);
+});
+function loadDraft() {
+  const d = JSON.parse(localStorage.getItem('draft') || 'null');
+  if (!d) return;
+  if (d.date) $('log-date').value = d.date;
+  if (d.weight) $('log-weight').value = d.weight;
+  if (d.hydration) $('log-hydration').value = d.hydration;
+  if (d.nutrition) $('log-nutrition').value = d.nutrition;
+  if (d.energy) $('log-energy').value = d.energy;
+  if (d.notes) $('log-notes').value = d.notes;
+  (d.strength||[]).forEach(s => addStrength(s.name, s.sets));
+  (d.mobility||[]).forEach(m => addMobility(m.name, m.focus, m.volume));
+  (d.cardio||[]).forEach(c => addCardio(c.type, c.duration, c.intensity));
+  updateEmpty();
+}
+
+// ---------- COLLECT / SAVE ----------
+function collectSession() {
+  const s = {
+    id: Date.now().toString(),
+    date: $('log-date').value,
+    weight: $('log-weight').value,
+    hydration: $('log-hydration').value,
+    nutrition: $('log-nutrition').value,
+    energy: $('log-energy').value,
+    notes: $('log-notes').value,
+    strength: [], mobility: [], cardio: []
+  };
+  document.querySelectorAll('#strength-box .ex-card').forEach(card => {
+    const name = card.querySelector('.ex-name').value;
+    const sets = [];
+    card.querySelectorAll('.set-row').forEach(r => {
+      sets.push({lbs: r.querySelector('.lbs').value, reps: r.querySelector('.reps').value});
+    });
+    s.strength.push({name, sets});
+  });
+  document.querySelectorAll('#mobility-box .ex-card').forEach(card => {
+    s.mobility.push({
+      name: card.querySelector('.mob-name').value,
+      focus: card.querySelector('.mob-focus').value,
+      volume: card.querySelector('.mob-vol').value
+    });
+  });
+  document.querySelectorAll('#cardio-box .ex-card').forEach(card => {
+    s.cardio.push({
+      type: card.querySelector('.car-type').value,
+      duration: parseFloat(card.querySelector('.car-dur').value)||0,
+      intensity: card.querySelector('.car-int').value
+    });
+  });
+  return s;
+}
+
+$('btn-save').onclick = () => {
+  const s = collectSession();
+  // update PRs
+  s.strength.forEach(ex => {
+    ex.sets.forEach(set => {
+      const lbs = parseFloat(set.lbs)||0, reps = parseInt(set.reps)||0;
+      if (lbs <= 0) return;
+      const e1rm = Math.round(lbs * (1 + reps/30)); // Epley
+      if (!prs[ex.name] || e1rm > prs[ex.name].e1rm) {
+        prs[ex.name] = {lbs, reps, e1rm, date: s.date};
+      }
+    });
+  });
+  localStorage.setItem('prs', JSON.stringify(prs));
+  history.push(s);
+  localStorage.setItem('history', JSON.stringify(history));
+  localStorage.removeItem('draft');
+  // clear form
+  $('strength-box').innerHTML = '<div class="empty" id="s-empty">No exercises</div>';
+  $('mobility-box').innerHTML = '<div class="empty" id="m-empty">No movements</div>';
+  $('cardio-box').innerHTML = '<div class="empty" id="c-empty">No cardio</div>';
+  $('log-weight').value = ''; $('log-notes').value = '';
+  $('log-date').valueAsDate = new Date();
+  updateEmpty();
+  alert('Saved!');
+};
+
+// ---------- DUPLICATE LAST ----------
+$('btn-dup').onclick = () => {
+  if (!history.length) return alert('No previous sessions');
+  const last = history[history.length-1];
+  $('log-date').valueAsDate = new Date();
+  $('log-weight').value = last.weight || '';
+  $('log-hydration').value = last.hydration || '4';
+  $('log-nutrition').value = last.nutrition || '3';
+  $('log-energy').value = last.energy || '3';
+  $('log-notes').value = '';
+  $('strength-box').innerHTML = ''; $('mobility-box').innerHTML = ''; $('cardio-box').innerHTML = '';
+  (last.strength||[]).forEach(s => addStrength(s.name, s.sets));
+  (last.mobility||[]).forEach(m => addMobility(m.name, m.focus, m.volume));
+  (last.cardio||[]).forEach(c => addCardio(c.type, c.duration, c.intensity));
+  updateEmpty();
+  saveDraft();
+  alert('Last session loaded – edit and save');
+};
+
+// ---------- TEMPLATES ----------
+$('btn-templates').onclick = () => {
+  const list = $('tpl-list');
+  list.innerHTML = '';
+  templates.forEach((t,i) => {
+    const d = document.createElement('div');
+    d.className = 'modal-item';
+    d.innerHTML = `<span style="flex:1">${t.name}</span>
+      <button class="small secondary" data-i="${i}">Load</button>
+      <button class="small danger" data-del="${i}">×</button>`;
+    list.appendChild(d);
+  });
+  list.querySelectorAll('[data-i]').forEach(b => b.onclick = () => {
+    const t = templates[b.dataset.i];
+    $('strength-box').innerHTML = ''; $('mobility-box').innerHTML = ''; $('cardio-box').innerHTML = '';
+    (t.strength||[]).forEach(n => addStrength(n));
+    (t.mobility||[]).forEach(n => addMobility(n));
+    (t.cardio||[]).forEach(n => addCardio(n));
+    updateEmpty(); saveDraft();
+    $('tpl-modal').classList.remove('active');
+  });
+  list.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    templates.splice(b.dataset.del,1);
+    localStorage.setItem('templates', JSON.stringify(templates));
+    $('btn-templates').click();
+  });
+  $('tpl-modal').classList.add('active');
+};
+$('tpl-save-current').onclick = () => {
+  const name = prompt('Template name?');
+  if (!name) return;
+  const s = collectSession();
+  templates.push({
+    name,
+    strength: s.strength.map(x=>x.name),
+    mobility: s.mobility.map(x=>x.name),
+    cardio: s.cardio.map(x=>x.type)
+  });
+  localStorage.setItem('templates', JSON.stringify(templates));
+  alert('Template saved');
+  $('tpl-modal').classList.remove('active');
+};
+$('tpl-close').onclick = () => $('tpl-modal').classList.remove('active');
+
+// ---------- ADD EXERCISES ----------
+$('btn-add-s').onclick = () => openSel('strength');
+$('btn-add-m').onclick = () => openSel('mobility');
+$('btn-add-c').onclick = () => openSel('cardio');
+
+function openSel(type) {
+  currentModal = type;
+  $('sel-title').textContent = 'Select ' + type;
+  $('sel-search').value = '';
+  renderSelList();
+  $('sel-modal').classList.add('active');
+}
+function renderSelList() {
+  const q = $('sel-search').value.toLowerCase();
+  const list = $('sel-list');
+  list.innerHTML = '';
+  const items = [...new Set([...(favs[currentModal]||[]), ...dict[currentModal]])];
+  items.filter(i => i.toLowerCase().includes(q)).forEach(item => {
+    const isFav = (favs[currentModal]||[]).includes(item);
+    const lab = document.createElement('label');
+    lab.className = 'modal-item';
+    lab.innerHTML = `<input type="checkbox" value="${item}">
+      <span style="flex:1">${item}</span>
+      <span style="color:${isFav?'#ff9500':'#ccc'};font-size:18px;" data-fav="${item}">★</span>`;
+    list.appendChild(lab);
+  });
+  list.querySelectorAll('[data-fav]').forEach(star => {
+    star.onclick = e => {
+      e.preventDefault(); e.stopPropagation();
+      const name = star.dataset.fav;
+      if (!favs[currentModal]) favs[currentModal] = [];
+      const idx = favs[currentModal].indexOf(name);
+      if (idx >= 0) favs[currentModal].splice(idx,1);
+      else favs[currentModal].unshift(name);
+      localStorage.setItem('favs', JSON.stringify(favs));
+      renderSelList();
+    };
+  });
+}
+$('sel-search').oninput = renderSelList;
+$('sel-add-custom').onclick = () => {
+  const v = $('sel-custom').value.trim();
+  if (!v) return;
+  if (!dict[currentModal].includes(v)) {
+    dict[currentModal].push(v);
+    localStorage.setItem('dict_'+currentModal[0], JSON.stringify(dict[currentModal]));
+  }
+  $('sel-custom').value = '';
+  renderSelList();
+  // auto-check
+  setTimeout(() => {
+    const cb = [...$('sel-list').querySelectorAll('input')].find(c => c.value===v);
+    if (cb) cb.checked = true;
+  }, 50);
+};
+$('sel-cancel').onclick = () => $('sel-modal').classList.remove('active');
+$('sel-confirm').onclick = () => {
+  $('sel-list').querySelectorAll('input:checked').forEach(cb => {
+    if (currentModal==='strength') addStrength(cb.value);
+    if (currentModal==='mobility') addMobility(cb.value);
+    if (currentModal==='cardio') addCardio(cb.value);
+  });
+  $('sel-modal').classList.remove('active');
+  updateEmpty(); saveDraft();
+};
+$('sel-modal').onclick = e => { if (e.target===$('sel-modal')) $('sel-modal').classList.remove('active'); };
+
+// ---------- BUILDERS ----------
+function addStrength(name, sets=[]) {
+  const box = $('strength-box');
+  if ($('s-empty')) $('s-empty').remove();
+  const div = document.createElement('div');
+  div.className = 'ex-card';
+  const isPR = prs[name] ? `<span class="pr-badge">PR ${prs[name].lbs}×${prs[name].reps}</span>` : '';
+  div.innerHTML = `
+    <div class="ex-title"><span>${name}${isPR}</span>
+      <span>
+        <button class="small secondary move-up">↑</button>
+        <button class="small secondary move-down">↓</button>
+        <button class="small danger rem">×</button>
+      </span>
+    </div>
+    <input type="hidden" class="ex-name" value="${name}">
+    <label>Sets</label>
+    <input type="number" class="ex-sets" min="1" value="${sets.length||''}" inputmode="numeric" placeholder="How many sets?">
+    <div class="sets-box"></div>`;
+  const setsInput = div.querySelector('.ex-sets');
+  const setsBox = div.querySelector('.sets-box');
+  function drawSets() {
+    const n = parseInt(setsInput.value)||0;
+    setsBox.innerHTML = '';
+    for (let i=0;i<n;i++) {
+      const row = document.createElement('div');
+      row.className = 'row set-row';
+      row.style.marginTop = '6px';
+      const lbs = sets[i]?.lbs || '';
+      const reps = sets[i]?.reps || '';
+      row.innerHTML = `<input class="lbs" type="number" placeholder="Lbs" step="0.5" value="${lbs}" inputmode="decimal">
+                       <input class="reps" type="number" placeholder="Reps" value="${reps}" inputmode="numeric">`;
+      setsBox.appendChild(row);
+    }
+    saveDraft();
+  }
+  setsInput.oninput = drawSets;
+  if (sets.length) drawSets();
+  div.querySelector('.rem').onclick = () => { div.remove(); updateEmpty(); saveDraft(); };
+  div.querySelector('.move-up').onclick = () => { const p=div.previousElementSibling; if(p) box.insertBefore(div,p); saveDraft(); };
+  div.querySelector('.move-down').onclick = () => { const n=div.nextElementSibling; if(n) box.insertBefore(n,div); saveDraft(); };
+  box.appendChild(div);
+}
+function addMobility(name, focus='', vol='') {
+  const box = $('mobility-box');
+  if ($('m-empty')) $('m-empty').remove();
+  const div = document.createElement('div');
+  div.className = 'ex-card';
+  div.innerHTML = `
+    <div class="ex-title"><span>${name}</span>
+      <span>
+        <button class="small secondary move-up">↑</button>
+        <button class="small secondary move-down">↓</button>
+        <button class="small danger rem">×</button>
+      </span>
+    </div>
+    <input type="hidden" class="mob-name" value="${name}">
+    <div class="row">
+      <div><label>Focus</label><input class="mob-focus" value="${focus}" placeholder="Hips etc"></div>
+      <div><label>Volume</label><input class="mob-vol" value="${vol}" placeholder="5 min / 10 reps"></div>
+    </div>`;
+  div.querySelector('.rem').onclick = () => { div.remove(); updateEmpty(); saveDraft(); };
+  div.querySelector('.move-up').onclick = () => { const p=div.previousElementSibling; if(p) box.insertBefore(div,p); saveDraft(); };
+  div.querySelector('.move-down').onclick = () => { const n=div.nextElementSibling; if(n) box.insertBefore(n,div); saveDraft(); };
+  div.querySelectorAll('input').forEach(i => i.oninput = saveDraft);
+  box.appendChild(div);
+}
+function addCardio(type, dur='', int='Moderate') {
+  const box = $('cardio-box');
+  if ($('c-empty')) $('c-empty').remove();
+  const div = document.createElement('div');
+  div.className = 'ex-card';
+  div.innerHTML = `
+    <div class="ex-title"><span>${type}</span>
+      <span>
+        <button class="small secondary move-up">↑</button>
+        <button class="small secondary move-down">↓</button>
+        <button class="small danger rem">×</button>
+      </span>
+    </div>
+    <input type="hidden" class="car-type" value="${type}">
+    <div class="row">
+      <div><label>Minutes</label><input class="car-dur" type="number" value="${dur}" inputmode="numeric"></div>
+      <div><label>Intensity</label>
+        <select class="car-int"><option>Low</option><option ${int==='Moderate'?'selected':''}>Moderate</option><option>High</option></select>
+      </div>
+    </div>`;
+  div.querySelector('.rem').onclick = () => { div.remove(); updateEmpty(); saveDraft(); };
+  div.querySelector('.move-up').onclick = () => { const p=div.previousElementSibling; if(p) box.insertBefore(div,p); saveDraft(); };
+  div.querySelector('.move-down').onclick = () => { const n=div.nextElementSibling; if(n) box.insertBefore(n,div); saveDraft(); };
+  div.querySelectorAll('input,select').forEach(i => i.onchange = saveDraft);
+  box.appendChild(div);
+}
+function updateEmpty() {
+  if (!$('strength-box').querySelector('.ex-card')) $('strength-box').innerHTML = '<div class="empty" id="s-empty">No exercises</div>';
+  if (!$('mobility-box').querySelector('.ex-card')) $('mobility-box').innerHTML = '<div class="empty" id="m-empty">No movements</div>';
+  if (!$('cardio-box').querySelector('.ex-card')) $('cardio-box').innerHTML = '<div class="empty" id="c-empty">No cardio</div>';
+}
+
+// ---------- REST TIMER ----------
+$('timer-btn').onclick = () => $('timer-modal').classList.add('active');
+$('timer-modal').onclick = e => { if (e.target===$('timer-modal')) $('timer-modal').classList.remove('active'); };
+document.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => startTimer(+b.dataset.sec));
+$('timer-start').onclick = () => {
+  const c = parseInt($('timer-custom').value);
+  if (c > 0) startTimer(c);
+};
+$('timer-stop').onclick = stopTimer;
+function startTimer(sec) {
+  stopTimer();
+  timerSec = sec;
+  $('timer-display').textContent = formatTime(timerSec);
+  $('timer-btn').textContent = formatTime(timerSec);
+  $('timer-btn').classList.add('running');
+  $('timer-start').style.display = 'none';
+  $('timer-stop').style.display = 'block';
+  timerInterval = setInterval(() => {
+    timerSec--;
+    $('timer-display').textContent = formatTime(timerSec);
+    $('timer-btn').textContent = formatTime(timerSec);
+    if (timerSec <= 0) {
+      stopTimer();
+      if (navigator.vibrate) navigator.vibrate([200,100,200]);
+      alert('Rest over!');
+    }
+  }, 1000);
+}
+function stopTimer() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  $('timer-btn').textContent = '⏱';
+  $('timer-btn').classList.remove('running');
+  $('timer-start').style.display = 'block';
+  $('timer-stop').style.display = 'none';
+  $('timer-display').textContent = '';
+}
+function formatTime(s) {
+  const m = Math.floor(s/60), sec = s%60;
+  return m + ':' + (sec<10?'0':'') + sec;
+}
+
+// ---------- HISTORY ----------
+function renderHistory() {
+  const list = $('history-list');
+  if (!history.length) { list.innerHTML = '<div class="empty">No sessions yet</div>'; return; }
+  list.innerHTML = '';
+  [...history].reverse().forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    const totalSets = (s.strength||[]).reduce((a,e)=>a+(e.sets?.length||0),0);
+    const cardio = (s.cardio||[]).reduce((a,c)=>a+(c.duration||0),0);
+    div.innerHTML = `<div>
+      <div class="date">${s.date}</div>
+      <div class="meta">${totalSets} sets · ${cardio} min cardio · Energy ${s.energy||'-'}</div>
+    </div>
+    <button class="small secondary">View</button>`;
+    div.querySelector('button').onclick = () => openEdit(s.id);
+    list.appendChild(div);
+  });
+}
+
+function openEdit(id) {
+  const s = history.find(x => x.id === id);
+  if (!s) return;
+  editId = id;
+  let html = `
+    <label>Date</label><input type="date" id="e-date" value="${s.date}">
+    <div class="row">
+      <div><label>Weight</label><input type="number" id="e-weight" value="${s.weight||''}" step="0.1"></div>
+      <div><label>Energy</label><input type="number" id="e-energy" value="${s.energy||''}" min="1" max="5"></div>
+    </div>
+    <label>Notes</label><textarea id="e-notes">${s.notes||''}</textarea>
+    <h2 style="margin-top:12px;">Strength</h2>`;
+  (s.strength||[]).forEach((ex,i) => {
+    html += `<div class="ex-card"><b>${ex.name}</b>`;
+    (ex.sets||[]).forEach((set,j) => {
+      html += `<div class="row" style="margin-top:4px;">
+        <input class="e-lbs" data-i="${i}" data-j="${j}" value="${set.lbs||''}" placeholder="lbs">
+        <input class="e-reps" data-i="${i}" data-j="${j}" value="${set.reps||''}" placeholder="reps"></div>`;
+    });
+    html += `</div>`;
+  });
+  html += `<h2>Cardio</h2>`;
+  (s.cardio||[]).forEach((c,i) => {
+    html += `<div class="row"><input value="${c.type}" disabled><input class="e-cdur" data-i="${i}" value="${c.duration||''}" placeholder="min"></div>`;
+  });
+  $('edit-body').innerHTML = html;
+  $('edit-modal').classList.add('active');
+}
+$('edit-cancel').onclick = () => { $('edit-modal').classList.remove('active'); editId=null; };
+$('edit-delete').onclick = () => {
+  if (!confirm('Delete this session?')) return;
+  history = history.filter(x => x.id !== editId);
+  localStorage.setItem('history', JSON.stringify(history));
+  $('edit-modal').classList.remove('active');
+  renderHistory();
+};
+$('edit-save').onclick = () => {
+  const s = history.find(x => x.id === editId);
+  if (!s) return;
+  s.date = $('e-date').value;
+  s.weight = $('e-weight').value;
+  s.energy = $('e-energy').value;
+  s.notes = $('e-notes').value;
+  document.querySelectorAll('.e-lbs').forEach(inp => {
+    const i=+inp.dataset.i, j=+inp.dataset.j;
+    if (s.strength[i]?.sets[j]) s.strength[i].sets[j].lbs = inp.value;
+  });
+  document.querySelectorAll('.e-reps').forEach(inp => {
+    const i=+inp.dataset.i, j=+inp.dataset.j;
+    if (s.strength[i]?.sets[j]) s.strength[i].sets[j].reps = inp.value;
+  });
+  document.querySelectorAll('.e-cdur').forEach(inp => {
+    const i=+inp.dataset.i;
+    if (s.cardio[i]) s.cardio[i].duration = parseFloat(inp.value)||0;
+  });
+  localStorage.setItem('history', JSON.stringify(history));
+  $('edit-modal').classList.remove('active');
+  renderHistory();
+  alert('Updated');
+};
+
+// ---------- INSIGHTS ----------
+function renderInsights() {
+  // streak
+  let streak = 0;
+  const days = new Set(history.map(h => h.date));
+  let d = new Date();
+  while (days.has(d.toISOString().slice(0,10))) {
+    streak++;
+    d.setDate(d.getDate()-1);
+  }
+  $('streak-num').textContent = streak;
+
+  // weekly stats
+  const now = new Date();
+  const weekAgo = new Date(now); weekAgo.setDate(now.getDate()-7);
+  const weekSessions = history.filter(h => new Date(h.date) >= weekAgo);
+  const totalSets = weekSessions.reduce((a,s) => a + (s.strength||[]).reduce((b,e)=>b+(e.sets?.length||0),0), 0);
+  const totalCardio = weekSessions.reduce((a,s) => a + (s.cardio||[]).reduce((b,c)=>b+(c.duration||0),0), 0);
+  const avgEnergy = weekSessions.length ? (weekSessions.reduce((a,s)=>a+(+s.energy||0),0)/weekSessions.length).toFixed(1) : '-';
+  $('weekly-stats').innerHTML = `
+    <div class="stat-box"><div class="num">${weekSessions.length}</div><div class="lbl">Sessions (7d)</div></div>
+    <div class="stat-box"><div class="num">${totalSets}</div><div class="lbl">Total Sets</div></div>
+    <div class="stat-box"><div class="num">${totalCardio}</div><div class="lbl">Cardio Min</div></div>
+    <div class="stat-box"><div class="num">${avgEnergy}</div><div class="lbl">Avg Energy</div></div>`;
+
+  // PRs
+  const prBox = $('pr-list');
+  const keys = Object.keys(prs);
+  if (!keys.length) prBox.innerHTML = '<div class="empty">No PRs yet</div>';
+  else {
+    prBox.innerHTML = keys.map(k => {
+      const p = prs[k];
+      return `<div style="padding:8px 0;border-bottom:.5px solid var(--border);">
+        <b>${k}</b> – ${p.lbs} lbs × ${p.reps} <span style="color:var(--sec);font-size:12px;">(e1RM ${p.e1rm}) · ${p.date}</span></div>`;
+    }).join('');
+  }
+
+  // charts
+  const dates = history.map(h=>h.date);
+  const weights = history.map(h=>parseFloat(h.weight)||null);
+  const energy = history.map(h=>parseInt(h.energy)||null);
+  const cardio = history.map(h=>(h.cardio||[]).reduce((a,c)=>a+(c.duration||0),0));
+
+  const makeChart = (id, type, data, color, extra={}) => {
+    const ctx = $(id).getContext('2d');
+    if (window[id+'Inst']) window[id+'Inst'].destroy();
+    const datasets = [{label:'', data, borderColor:color, backgroundColor:color+'33', tension:.25, fill:type==='line'}];
+    if (id==='weightChart' && goalWeight) {
+      datasets.push({label:'Goal', data: dates.map(()=>+goalWeight), borderColor:'#ff3b30', borderDash:[6,4], pointRadius:0, fill:false});
+    }
+    window[id+'Inst'] = new Chart(ctx, {
+      type, data:{labels:dates, datasets},
+      options:{responsive:true, plugins:{legend:{display:false}}, scales:{x:{ticks:{maxRotation:45}}, ...extra}}
+    });
+  };
+  makeChart('weightChart','line',weights,'#007aff');
+  makeChart('motivationChart','bar',energy,'#34c759',{y:{min:0,max:5}});
+  makeChart('cardioChart','bar',cardio,'#ff9500');
+}
+$('btn-set-goal').onclick = () => {
+  goalWeight = $('goal-weight').value;
+  localStorage.setItem('goalWeight', goalWeight);
+  renderInsights();
+};
+
+// ---------- EXPORT / IMPORT ----------
+$('btn-export-json').onclick = () => {
+  const data = {history, dict, favs, templates, prs, goalWeight};
+  const a = document.createElement('a');
+  a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data,null,2));
+  a.download = 'workout_backup.json';
+  a.click();
+};
+$('btn-export-csv').onclick = () => {
+  let csv = 'Date,Weight,Energy,Notes,Exercise,Set,Lbs,Reps,CardioType,Duration,Intensity\n';
+  history.forEach(s => {
+    (s.strength||[]).forEach(ex => {
+      (ex.sets||[]).forEach((set,i) => {
+        csv += `${s.date},${s.weight||''},${s.energy||''},"${(s.notes||'').replace(/"/g,'""')}",${ex.name},${i+1},${set.lbs||''},${set.reps||''},,,\n`;
+      });
+    });
+    (s.cardio||[]).forEach(c => {
+      csv += `${s.date},${s.weight||''},${s.energy||''},"${(s.notes||'').replace(/"/g,'""')}",,,,,${c.type},${c.duration||''},${c.intensity||''}\n`;
+    });
+  });
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'workout_export.csv';
+  a.click();
+};
+$('import-file').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      if (d.history) history = d.history;
+      if (d.dict) dict = d.dict;
+      if (d.favs) favs = d.favs;
+      if (d.templates) templates = d.templates;
+      if (d.prs) prs = d.prs;
+      if (d.goalWeight) goalWeight = d.goalWeight;
+      localStorage.setItem('history', JSON.stringify(history));
+      localStorage.setItem('dict_s', JSON.stringify(dict.strength));
+      localStorage.setItem('dict_m', JSON.stringify(dict.mobility));
+      localStorage.setItem('dict_c', JSON.stringify(dict.cardio));
+      localStorage.setItem('favs', JSON.stringify(favs));
+      localStorage.setItem('templates', JSON.stringify(templates));
+      localStorage.setItem('prs', JSON.stringify(prs));
+      localStorage.setItem('goalWeight', goalWeight);
+      alert('Imported! Reloading...');
+      location.reload();
+    } catch { alert('Invalid file'); }
+  };
+  r.readAsText(f);
+};
+
+// ---------- COPY ----------
+$('btn-copy').onclick = () => {
+  const s = collectSession();
+  let t = `Workout ${s.date}\nWeight: ${s.weight||'-'} | Energy: ${s.energy||'-'}\n`;
+  if (s.notes) t += `Notes: ${s.notes}\n`;
+  t += '\nStrength:\n';
+  s.strength.forEach(ex => {
+    t += `- ${ex.name}: ` + ex.sets.map((set,i)=>`S${i+1} ${set.lbs}×${set.reps}`).join(', ') + '\n';
+  });
+  navigator.clipboard?.writeText(t).then(()=>alert('Copied')).catch(()=>alert('Copy failed'));
+};
+</script>
+</body>
+</html>
